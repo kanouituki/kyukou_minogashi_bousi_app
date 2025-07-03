@@ -11,15 +11,25 @@ using UnityEngine.InputSystem;
 public sealed class Game : GameBase
 {
     // 変数の宣言
-    int sec = 0;
+    float lat;
+    float lng;
+    float recorded_lat;
+    float recorded_lng;
+    float distance;
+    string text;
+    bool isStartGPS = false;
+
+    GcRect record_button = new GcRect(0, 50, 160, 80);
 
     /// <summary>
     /// 初期化処理
     /// </summary>
     public override void InitGame()
     {
-        // キャンバスの大きさを設定します
-        gc.ChangeCanvasSize(720, 1280);
+        gc.SetResolution(720, 1280);
+        lat = 35.685410f;
+        lng = 139.752842f;
+        text = "取得中";
     }
 
     /// <summary>
@@ -27,8 +37,37 @@ public sealed class Game : GameBase
     /// </summary>
     public override void UpdateGame()
     {
-        // 起動からの経過時間を取得します
-        sec = (int)gc.TimeSinceStartup;
+        if (!isStartGPS)
+        {
+            gc.StartGeolocationService();
+            isStartGPS = true;
+        }
+
+        if (!gc.HasGeolocationPermission)
+        {
+            text = "位置情報サービスが無効です";
+        }
+
+        if (gc.HasGeolocationUpdate)
+        {
+            lat = gc.GeolocationLastLatitude;
+            lng = gc.GeolocationLastLongitude;
+            text = string.Format("緯度: {0}\n経度: {1}", lat, lng);
+        }
+
+        if (touch_object(record_button))
+        {
+            text = "recorded";
+
+            if (gc.HasGeolocationUpdate)
+            {
+                gc.Save("recorded_lat", gc.GeolocationLastLatitude);
+                gc.Save("recorded_lng", gc.GeolocationLastLongitude);
+            }
+            gc.TryLoad("recorded_lat", out recorded_lat);
+            gc.TryLoad("recorded_lng", out recorded_lng);
+        }
+        distance = CalculateDistance(recorded_lat, recorded_lng, gc.GeolocationLastLatitude, gc.GeolocationLastLongitude);
     }
 
     /// <summary>
@@ -36,19 +75,42 @@ public sealed class Game : GameBase
     /// </summary>
     public override void DrawGame()
     {
-        // 画面を白で塗りつぶします
+
         gc.ClearScreen();
-
-        // 青空の画像を描画します
-        gc.DrawImage(GcImage.BlueSky, 0, 0);
-
-        // 黒の文字を描画します
         gc.SetColor(0, 0, 0);
-        gc.SetFontSize(48);
-        gc.SetStringAnchor(GcAnchor.UpperLeft);
-        gc.DrawString("この文字と青空の画像が", 40, 160);
-        gc.DrawString("見えていれば成功です", 40, 270);
-        gc.SetStringAnchor(GcAnchor.UpperRight);
-        gc.DrawString($"{sec}s", 630, 10);
+        gc.DrawString(text, 0, 0);
+
+        gc.FillRect(record_button);
+        gc.DrawString("記録された緯度:"+recorded_lat.ToString(), 0, 180);
+        gc.DrawString("記録された経度:"+recorded_lng.ToString(), 0, 210);
+        gc.DrawString("現在地までの距離："+distance.ToString(), 0, 240);
+
     }
+
+
+    public bool touch_object(GcRect rect)
+    {
+        float px = gc.GetPointerX(0);
+        float py = gc.GetPointerY(0);
+
+        return (rect.Position.x < px && px < rect.Position.x + rect.Size.x) && (rect.Position.y < py && py < rect.Position.y + rect.Size.y);
+    }
+    
+    float CalculateDistance(float lat1, float lon1, float lat2, float lon2)
+    {
+        const float R = 6371000f; // 地球の半径（メートル）
+
+        float radLat1 = Mathf.Deg2Rad * lat1;
+        float radLat2 = Mathf.Deg2Rad * lat2;
+        float dLat = Mathf.Deg2Rad * (lat2 - lat1);
+        float dLon = Mathf.Deg2Rad * (lon2 - lon1);
+
+        float a = Mathf.Sin(dLat / 2) * Mathf.Sin(dLat / 2) +
+                Mathf.Cos(radLat1) * Mathf.Cos(radLat2) *
+                Mathf.Sin(dLon / 2) * Mathf.Sin(dLon / 2);
+        float c = 2 * Mathf.Atan2(Mathf.Sqrt(a), Mathf.Sqrt(1 - a));
+
+        return R * c;
+    }
+
 }
