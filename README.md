@@ -1,33 +1,19 @@
-[![Latest Release](https://img.shields.io/github/release/sfc-sdp/GameCanvas-Unity.svg)](https://github.com/sfc-sdp/GameCanvas-Unity/releases/latest)　[![GameCanvas API v6.6](https://img.shields.io/badge/GameCanvas%20API-v6.6-yellow.svg)](https://sfc-sdp.github.io/GameCanvas-Unity/)
-[<img alt="GameCanvas" align="right" src="Assets/GameCanvas/Icons/icon_android_full.png"/>](https://github.com/sfc-sdp/GameCanvas-Unity/releases/latest)
+# Kyukou Minogashi Bousi App
 
-## GameCanvas にようこそ！
+This repository contains a Unity project built on the **GameCanvas** framework. The current implementation focuses on geolocation features that allow a user to record their position and measure the distance from that point.
 
-**GameCanvas for Unity** は、慶應義塾大学『スマートデバイスプログラミング』にて  
-教材として使われている 2Dゲームフレームワーク です。
+## Overview
 
-プログラミング初心者でも、スマートデバイス向けアプリケーションを楽しく開発できる環境を目指して開発されました。
+- The project imports GameCanvas packages and assets.
+- `Assets/Game.cs` starts the geolocation service, stores coordinates with `gc.Save`, and displays the distance to the saved point.
+- Earlier commits experimented with a class cancellation notification feature, but those scripts were removed when the GameCanvas template was introduced.
 
-## 導入方法
-1. [UnityHub](https://unity3d.com/jp/get-unity/download)を入手し、Unity 2022.3.24f1, Androidプラグイン, iOSプラグイン, 日本語言語パックを選択してインストールします  
-※ 推奨バージョンは Unity 2022.3.24f1 です。9GB以上の空き容量が必要です  
-※ インストール方法が分からない方は[こちらの記事](https://creive.me/archives/13376/)も参考にしてください
+## Usage
 
-2. [最新の GameCanvas](https://github.com/sfc-sdp/GameCanvas-Unity/releases/latest) からソースコードを入手・解凍します。UnityHubの「リストに追加」から解凍したフォルダを選択すると、プロジェクトが登録されます
+1. Install Unity 2022.3.24f1 (or later) via UnityHub with the Android/iOS modules.
+2. Clone this repository and open it with Unity.
+3. Open the **Game** scene and press Play to run the sample.
 
-3. プロジェクトを開き、エディターが立ち上がったらプレビューボタン(▶️)を押します。サンプルが実行されれば導入完了です
+## License
 
-4. [Assets/Game.cs](Assets/Game.cs) を編集して、自分だけのオリジナルアプリを作りましょう！
-
-iOS や Android への書き出しなど、より詳しい解説は、[スマートデバイスプログラミング 講義テキスト](https://github.com/sfc-sdp/SDP-Textbook) を参照してください
-
-## API ドキュメント
-最新の仕様は [GameCanvas for Unity API ドキュメント](https://sfc-sdp.github.io/GameCanvas-Unity/) で確認できます
-
-## 質問・バグ報告
-GameCanvasに対する質問や提案、バグ報告は [![Issues](https://img.shields.io/github/issues/sfc-sdp/GameCanvas-Unity.svg)](https://github.com/sfc-sdp/GameCanvas-Unity/issues) で受け付けています
-
-## ライセンス
-Copyright (c) 2015-2024 Smart Device Programming.
-
-This software is released under the MIT License, see [LICENSE](LICENSE).
+Distributed under the MIT License. See [LICENSE](LICENSE) for details. Third‑party notices are available in [NOTICE](NOTICE).
