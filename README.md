@@ -1,0 +1,1 @@
+# kyukou_minogashi_bousi_app
