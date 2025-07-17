@@ -1,0 +1,38 @@
+# 環境変数（APIキーが含まれるため絶対に除外）
+.env
+.env.local
+.env.*.local
+
+# Python関連
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# データファイル（個人の履歴情報が含まれるため除外）
+data/
+cache.json
+
+# ログファイル（個人の実行履歴が含まれるため除外）
+logs/
+*.log
+
+# 結果ファイル（個人のコース情報が含まれるため除外）
+results/
+*.json
+
+# IDE関連
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS関連
+.DS_Store
+
+# Windows関連
+Thumbs.db
