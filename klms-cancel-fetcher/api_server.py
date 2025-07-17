@@ -57,21 +57,21 @@ async def health_check():
 
 @app.get("/api/kyukou")
 async def get_kyukou_info(
-    token: Optional[str] = Query(None, description="APIアクセストークン（将来の認証用）"),
+    canvas_token: Optional[str] = Query(None, description="Canvas APIトークン"),
     force_refresh: bool = Query(False, description="キャッシュを無視して強制的に最新情報を取得")
 ):
     """
     休講情報を取得するAPIエンドポイント
     
     Args:
-        token: APIアクセストークン（現在は未使用）
+        canvas_token: Canvas APIトークン（ユーザー提供）
         force_refresh: キャッシュを無視するかどうか
     
     Returns:
         Dict: 休講情報のJSON
     """
     try:
-        logger.info(f"休講情報取得API呼び出し - force_refresh: {force_refresh}")
+        logger.info(f"休講情報取得API呼び出し - canvas_token: {'あり' if canvas_token else 'なし'}, force_refresh: {force_refresh}")
         
         # 結果を保存するディレクトリを作成
         os.makedirs(Config.RESULTS_DIR, exist_ok=True)
@@ -90,7 +90,7 @@ async def get_kyukou_info(
         
         # 1. コース一覧を取得
         logger.info("コース一覧を取得中...")
-        courses = get_courses()
+        courses = get_courses(canvas_token)
         if not courses:
             raise HTTPException(status_code=500, detail="コースの取得に失敗しました")
         
@@ -108,7 +108,7 @@ async def get_kyukou_info(
                 continue
             
             # お知らせを取得
-            announcements = get_announcements(course_id)
+            announcements = get_announcements(course_id, canvas_token)
             if not announcements:
                 logger.debug("お知らせが見つかりませんでした。")
                 continue
@@ -176,7 +176,9 @@ async def get_kyukou_info(
         raise HTTPException(status_code=500, detail=f"内部サーバーエラー: {str(e)}")
 
 @app.get("/api/kyukou/latest")
-async def get_latest_result():
+async def get_latest_result(
+    canvas_token: Optional[str] = Query(None, description="Canvas APIトークン（現在未使用）")
+):
     """
     最新の結果ファイルから休講情報を取得（高速版）
     """

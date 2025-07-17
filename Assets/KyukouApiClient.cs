@@ -51,7 +51,7 @@ public class KyukouApiClient : MonoBehaviour
     /// <summary>
     /// 休講情報を取得（メインメソッド）
     /// </summary>
-    /// <param name="apiToken">APIトークン（現在は未使用）</param>
+    /// <param name="apiToken">Canvas APIトークン</param>
     /// <param name="forceRefresh">キャッシュを無視して強制更新</param>
     public void GetKyukouInfo(string? apiToken = null, bool forceRefresh = false)
     {
@@ -79,24 +79,22 @@ public class KyukouApiClient : MonoBehaviour
         string url = $"{apiBaseUrl}{endpoint}";
 
         // クエリパラメータ追加
-        if (!useLatestCache || forceRefresh)
+        var queryParams = new System.Collections.Generic.List<string>();
+        
+        // Canvas APIトークンがある場合は追加
+        if (!string.IsNullOrEmpty(apiToken))
         {
-            var queryParams = new System.Collections.Generic.List<string>();
-            
-            if (!string.IsNullOrEmpty(apiToken))
-            {
-                queryParams.Add($"token={UnityWebRequest.EscapeURL(apiToken)}");
-            }
-            
-            if (forceRefresh)
-            {
-                queryParams.Add("force_refresh=true");
-            }
+            queryParams.Add($"canvas_token={UnityEngine.Networking.UnityWebRequest.EscapeURL(apiToken)}");
+        }
+        
+        if (forceRefresh)
+        {
+            queryParams.Add("force_refresh=true");
+        }
 
-            if (queryParams.Count > 0)
-            {
-                url += "?" + string.Join("&", queryParams);
-            }
+        if (queryParams.Count > 0)
+        {
+            url += "?" + string.Join("&", queryParams);
         }
 
         if (enableDebugLog)

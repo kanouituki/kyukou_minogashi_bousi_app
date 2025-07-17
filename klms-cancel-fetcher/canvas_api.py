@@ -4,12 +4,16 @@ from config import Config, get_logger
 
 logger = get_logger(__name__)
 
-def get_courses():
+def get_courses(canvas_token=None):
     """
     Canvas LMSからユーザーが登録しているコース一覧を取得します。
+    
+    Args:
+        canvas_token: Canvas APIトークン（Noneの場合は環境変数から取得）
     """
+    token = canvas_token or Config.CANVAS_ACCESS_TOKEN
     headers = {
-        "Authorization": f"Bearer {Config.CANVAS_ACCESS_TOKEN}"
+        "Authorization": f"Bearer {token}"
     }
     url = f"{Config.CANVAS_API_BASE_URL}courses"
     try:
@@ -20,12 +24,17 @@ def get_courses():
         logger.error(f"コースの取得中にエラーが発生しました: {e}")
         return None
 
-def get_announcements(course_id):
+def get_announcements(course_id, canvas_token=None):
     """
     指定されたコースの最新のお知らせを取得します。
+    
+    Args:
+        course_id: コースID
+        canvas_token: Canvas APIトークン（Noneの場合は環境変数から取得）
     """
+    token = canvas_token or Config.CANVAS_ACCESS_TOKEN
     headers = {
-        "Authorization": f"Bearer {Config.CANVAS_ACCESS_TOKEN}"
+        "Authorization": f"Bearer {token}"
     }
     url = f"{Config.CANVAS_API_BASE_URL}announcements"
     

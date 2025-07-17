@@ -9,13 +9,16 @@ from config import Config, get_logger
 
 logger = get_logger(__name__)
 
-def main():
+def main(canvas_token=None):
     """
     KLMS休講情報取得メインスクリプト
     1. Canvas APIでコース一覧を取得
     2. 各コースのお知らせを取得
     3. GPTで休講判定を実行
     4. 結果をJSONファイルに保存
+    
+    Args:
+        canvas_token: Canvas APIトークン（Noneの場合は環境変数から取得）
     """
     logger.info("KLMS休講情報取得を開始します...")
     
@@ -38,7 +41,7 @@ def main():
     try:
         # 1. コース一覧を取得
         logger.info("コース一覧を取得中...")
-        courses = get_courses()
+        courses = get_courses(canvas_token)
         if not courses:
             logger.error("コースの取得に失敗しました。")
             return
@@ -57,7 +60,7 @@ def main():
                 continue
             
             # お知らせを取得
-            announcements = get_announcements(course_id)
+            announcements = get_announcements(course_id, canvas_token)
             if not announcements:
                 logger.debug("  お知らせが見つかりませんでした。")
                 continue
