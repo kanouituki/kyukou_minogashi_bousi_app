@@ -3,6 +3,7 @@ using GameCanvas;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using KyukouApp;
 
 /// <summary>
 /// ゲームクラス。
@@ -19,7 +20,14 @@ public sealed class Game : GameBase
     string text;
     bool isStartGPS = false;
 
+    // 休講情報関連
+    KyukouApiClient? kyukouApiClient;
+    KyukouResponse? lastKyukouResponse;
+    string kyukouText = "休講情報: 未取得";
+    bool isLoadingKyukou = false;
+
     GcRect record_button = new GcRect(0, 50, 160, 80);
+    GcRect kyukou_button = new GcRect(180, 50, 160, 80);
 
     /// <summary>
     /// 初期化処理
@@ -30,6 +38,24 @@ public sealed class Game : GameBase
         lat = 35.685410f;
         lng = 139.752842f;
         text = "取得中";
+
+        // 休講情報APIクライアントの初期化
+        InitializeKyukouApiClient();
+    }
+
+    /// <summary>
+    /// 休講情報APIクライアントの初期化
+    /// </summary>
+    void InitializeKyukouApiClient()
+    {
+        // KyukouApiClientコンポーネントを追加
+        kyukouApiClient = gc.gameObject.AddComponent<KyukouApiClient>();
+        
+        // コールバック設定
+        kyukouApiClient.OnKyukouReceived += OnKyukouInfoReceived;
+        kyukouApiClient.OnApiError += OnKyukouApiError;
+        
+        Debug.Log("KyukouApiClient 初期化完了");
     }
 
     /// <summary>
@@ -67,6 +93,19 @@ public sealed class Game : GameBase
             gc.TryLoad("recorded_lat", out recorded_lat);
             gc.TryLoad("recorded_lng", out recorded_lng);
         }
+
+        // 休講情報取得ボタン（タップ時のみ実行）
+        if (touch_object(kyukou_button) && gc.GetPointerFrameCount(0) == 1)
+        {
+            if (kyukouApiClient != null && !isLoadingKyukou)
+            {
+                kyukouText = "休講情報: 取得中...";
+                isLoadingKyukou = true;
+                kyukouApiClient.GetKyukouInfo();
+                Debug.Log("休講情報取得開始");
+            }
+        }
+
         distance = CalculateDistance(recorded_lat, recorded_lng, gc.GeolocationLastLatitude, gc.GeolocationLastLongitude);
     }
 
@@ -75,16 +114,51 @@ public sealed class Game : GameBase
     /// </summary>
     public override void DrawGame()
     {
-
         gc.ClearScreen();
         gc.SetColor(0, 0, 0);
         gc.DrawString(text, 0, 0);
 
+        // 位置記録ボタン
+        gc.SetColor(100, 100, 100);
         gc.FillRect(record_button);
-        gc.DrawString("記録された緯度:"+recorded_lat.ToString(), 0, 180);
-        gc.DrawString("記録された経度:"+recorded_lng.ToString(), 0, 210);
-        gc.DrawString("現在地までの距離："+distance.ToString(), 0, 240);
+        gc.SetColor(255, 255, 255);
+        gc.DrawString("位置記録", record_button.Position.x + 10, record_button.Position.y + 30);
 
+        // 休講情報取得ボタン
+        gc.SetColor(isLoadingKyukou ? 150 : 100, 100, 200);
+        gc.FillRect(kyukou_button);
+        gc.SetColor(255, 255, 255);
+        gc.DrawString("休講情報", kyukou_button.Position.x + 10, kyukou_button.Position.y + 30);
+
+        // 位置情報表示
+        gc.SetColor(0, 0, 0);
+        gc.DrawString("記録された緯度:" + recorded_lat.ToString(), 0, 180);
+        gc.DrawString("記録された経度:" + recorded_lng.ToString(), 0, 210);
+        gc.DrawString("現在地までの距離：" + distance.ToString("F1") + "m", 0, 240);
+
+        // 休講情報表示
+        gc.DrawString(kyukouText, 0, 280);
+        
+        // 休講詳細表示
+        if (lastKyukouResponse != null && lastKyukouResponse.cancellations.Length > 0)
+        {
+            int yOffset = 320;
+            gc.DrawString("=== 休講一覧 ===", 0, yOffset);
+            yOffset += 30;
+
+            for (int i = 0; i < lastKyukouResponse.cancellations.Length && i < 5; i++) // 最大5件表示
+            {
+                var cancel = lastKyukouResponse.cancellations[i];
+                gc.DrawString($"{cancel.course}", 0, yOffset);
+                gc.DrawString($"{cancel.date} {cancel.period}", 0, yOffset + 20);
+                yOffset += 50;
+            }
+
+            if (lastKyukouResponse.cancellations.Length > 5)
+            {
+                gc.DrawString($"...他{lastKyukouResponse.cancellations.Length - 5}件", 0, yOffset);
+            }
+        }
     }
 
 
@@ -111,6 +185,36 @@ public sealed class Game : GameBase
         float c = 2 * Mathf.Atan2(Mathf.Sqrt(a), Mathf.Sqrt(1 - a));
 
         return R * c;
+    }
+
+    /// <summary>
+    /// 休講情報取得成功時のコールバック
+    /// </summary>
+    void OnKyukouInfoReceived(KyukouResponse response)
+    {
+        lastKyukouResponse = response;
+        isLoadingKyukou = false;
+
+        if (response.summary.total_cancellations > 0)
+        {
+            kyukouText = $"休講情報: {response.summary.total_cancellations}件の休講があります";
+        }
+        else
+        {
+            kyukouText = "休講情報: 本日の休講はありません";
+        }
+
+        Debug.Log($"休講情報取得完了: {response.summary.total_cancellations}件");
+    }
+
+    /// <summary>
+    /// 休講情報取得失敗時のコールバック
+    /// </summary>
+    void OnKyukouApiError(string errorMessage)
+    {
+        isLoadingKyukou = false;
+        kyukouText = $"休講情報: エラー - {errorMessage}";
+        Debug.LogError($"休講情報取得エラー: {errorMessage}");
     }
 
 }
