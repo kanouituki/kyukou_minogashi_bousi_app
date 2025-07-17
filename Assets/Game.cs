@@ -26,8 +26,8 @@ public sealed class Game : GameBase
     string kyukouText = "休講情報: 未取得";
     bool isLoadingKyukou = false;
 
-    GcRect record_button = new GcRect(0, 50, 160, 80);
-    GcRect kyukou_button = new GcRect(180, 50, 160, 80);
+    GcRect record_button = new GcRect(50, 450, 200, 60);
+    GcRect kyukou_button = new GcRect(300, 450, 200, 60);
 
     /// <summary>
     /// 初期化処理
@@ -49,7 +49,7 @@ public sealed class Game : GameBase
     void InitializeKyukouApiClient()
     {
         // KyukouApiClientコンポーネントを追加
-        kyukouApiClient = gc.gameObject.AddComponent<KyukouApiClient>();
+        kyukouApiClient = gameObject.AddComponent<KyukouApiClient>();
         
         // コールバック設定
         kyukouApiClient.OnKyukouReceived += OnKyukouInfoReceived;
@@ -95,14 +95,23 @@ public sealed class Game : GameBase
         }
 
         // 休講情報取得ボタン（タップ時のみ実行）
-        if (touch_object(kyukou_button) && gc.GetPointerFrameCount(0) == 1)
+        if (touch_object(kyukou_button))
         {
-            if (kyukouApiClient != null && !isLoadingKyukou)
+            Debug.Log("休講情報ボタンがタッチされました");
+            if (gc.GetPointerFrameCount(0) == 1)
             {
-                kyukouText = "休講情報: 取得中...";
-                isLoadingKyukou = true;
-                kyukouApiClient.GetKyukouInfo();
-                Debug.Log("休講情報取得開始");
+                Debug.Log("フレームカウント条件OK");
+                if (kyukouApiClient != null && !isLoadingKyukou)
+                {
+                    kyukouText = "休講情報: 取得中...";
+                    isLoadingKyukou = true;
+                    kyukouApiClient.GetKyukouInfo();
+                    Debug.Log("休講情報取得開始");
+                }
+                else
+                {
+                    Debug.Log($"API呼び出し失敗: kyukouApiClient={kyukouApiClient}, isLoadingKyukou={isLoadingKyukou}");
+                }
             }
         }
 
@@ -124,11 +133,20 @@ public sealed class Game : GameBase
         gc.SetColor(255, 255, 255);
         gc.DrawString("位置記録", record_button.Position.x + 10, record_button.Position.y + 30);
 
-        // 休講情報取得ボタン
-        gc.SetColor(isLoadingKyukou ? 150 : 100, 100, 200);
+        // 休講情報取得ボタン（強制表示）
+        gc.SetColor(200, 100, 100);  // 赤色で強制表示
         gc.FillRect(kyukou_button);
         gc.SetColor(255, 255, 255);
         gc.DrawString("休講情報", kyukou_button.Position.x + 10, kyukou_button.Position.y + 30);
+        
+        // デバッグ用: ボタンの座標を表示
+        gc.SetColor(0, 0, 0);
+        gc.DrawString($"ボタン位置: X={kyukou_button.Position.x}, Y={kyukou_button.Position.y}", 0, 520);
+        
+        // デバッグ用: マウス座標を表示
+        float mouseX = gc.GetPointerX(0);
+        float mouseY = gc.GetPointerY(0);
+        gc.DrawString($"マウス位置: X={mouseX}, Y={mouseY}", 0, 550);
 
         // 位置情報表示
         gc.SetColor(0, 0, 0);

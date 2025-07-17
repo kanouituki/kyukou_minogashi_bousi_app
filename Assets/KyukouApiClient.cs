@@ -74,72 +74,58 @@ public class KyukouApiClient : MonoBehaviour
     {
         IsLoading = true;
 
-        try
+        // エンドポイントURLを決定
+        string endpoint = useLatestCache && !forceRefresh ? "/api/kyukou/latest" : "/api/kyukou";
+        string url = $"{apiBaseUrl}{endpoint}";
+
+        // クエリパラメータ追加
+        if (!useLatestCache || forceRefresh)
         {
-            // エンドポイントURLを決定
-            string endpoint = useLatestCache && !forceRefresh ? "/api/kyukou/latest" : "/api/kyukou";
-            string url = $"{apiBaseUrl}{endpoint}";
-
-            // クエリパラメータ追加
-            if (!useLatestCache || forceRefresh)
+            var queryParams = new System.Collections.Generic.List<string>();
+            
+            if (!string.IsNullOrEmpty(apiToken))
             {
-                var queryParams = new System.Collections.Generic.List<string>();
-                
-                if (!string.IsNullOrEmpty(apiToken))
-                {
-                    queryParams.Add($"token={UnityWebRequest.EscapeURL(apiToken)}");
-                }
-                
-                if (forceRefresh)
-                {
-                    queryParams.Add("force_refresh=true");
-                }
-
-                if (queryParams.Count > 0)
-                {
-                    url += "?" + string.Join("&", queryParams);
-                }
+                queryParams.Add($"token={UnityWebRequest.EscapeURL(apiToken)}");
+            }
+            
+            if (forceRefresh)
+            {
+                queryParams.Add("force_refresh=true");
             }
 
-            if (enableDebugLog)
+            if (queryParams.Count > 0)
             {
-                Debug.Log($"[KyukouApiClient] リクエスト開始: {url}");
-            }
-
-            // HTTPリクエスト作成
-            using (UnityWebRequest request = UnityWebRequest.Get(url))
-            {
-                // タイムアウト設定
-                request.timeout = (int)timeoutSeconds;
-
-                // リクエスト送信
-                yield return request.SendWebRequest();
-
-                // レスポンス処理
-                if (request.result == UnityWebRequest.Result.Success)
-                {
-                    yield return ProcessSuccessResponse(request.downloadHandler.text);
-                }
-                else
-                {
-                    yield return ProcessErrorResponse(request);
-                }
+                url += "?" + string.Join("&", queryParams);
             }
         }
-        catch (Exception e)
+
+        if (enableDebugLog)
         {
-            string errorMessage = $"予期しないエラーが発生しました: {e.Message}";
-            if (enableDebugLog)
+            Debug.Log($"[KyukouApiClient] リクエスト開始: {url}");
+        }
+
+        // HTTPリクエスト作成
+        using (UnityWebRequest request = UnityWebRequest.Get(url))
+        {
+            // タイムアウト設定
+            request.timeout = (int)timeoutSeconds;
+
+            // リクエスト送信
+            yield return request.SendWebRequest();
+
+            // レスポンス処理
+            if (request.result == UnityWebRequest.Result.Success)
             {
-                Debug.LogError($"[KyukouApiClient] {errorMessage}");
-                Debug.LogException(e);
+                yield return ProcessSuccessResponse(request.downloadHandler.text);
             }
-            OnApiError?.Invoke(errorMessage);
+            else
+            {
+                yield return ProcessErrorResponse(request);
+            }
         }
-        finally
-        {
-            IsLoading = false;
-        }
+
+        // エラーハンドリング（try-catch を使わない）
+        IsLoading = false;
     }
 
     /// <summary>
@@ -147,21 +133,40 @@ public class KyukouApiClient : MonoBehaviour
     /// </summary>
     private IEnumerator ProcessSuccessResponse(string jsonResponse)
     {
+        if (enableDebugLog)
+        {
+            Debug.Log($"[KyukouApiClient] レスポンス受信: {jsonResponse.Substring(0, Mathf.Min(200, jsonResponse.Length))}...");
+        }
+
+        // JSONパース
+        KyukouResponse response = null;
+        string errorMessage = null;
+
         try
+        {
+            response = JsonUtility.FromJson<KyukouResponse>(jsonResponse);
+            
+            if (response == null)
+            {
+                errorMessage = "JSONのパースに失敗しました";
+            }
+        }
+        catch (Exception e)
+        {
+            errorMessage = $"レスポンスの解析に失敗しました: {e.Message}";
+        }
+
+        if (errorMessage != null)
         {
             if (enableDebugLog)
             {
-                Debug.Log($"[KyukouApiClient] レスポンス受信: {jsonResponse.Substring(0, Mathf.Min(200, jsonResponse.Length))}...");
+                Debug.LogError($"[KyukouApiClient] {errorMessage}");
+                Debug.LogError($"[KyukouApiClient] 生レスポンス: {jsonResponse}");
             }
-
-            // JSONパース
-            KyukouResponse response = JsonUtility.FromJson<KyukouResponse>(jsonResponse);
-
-            if (response == null)
-            {
-                throw new Exception("JSONのパースに失敗しました");
-            }
-
+            OnApiError?.Invoke(errorMessage);
+        }
+        else
+        {
             // レスポンス保存
             LastResponse = response;
 
@@ -172,16 +177,6 @@ public class KyukouApiClient : MonoBehaviour
 
             // コールバック実行
             OnKyukouReceived?.Invoke(response);
-        }
-        catch (Exception e)
-        {
-            string errorMessage = $"レスポンスの解析に失敗しました: {e.Message}";
-            if (enableDebugLog)
-            {
-                Debug.LogError($"[KyukouApiClient] {errorMessage}");
-                Debug.LogError($"[KyukouApiClient] 生レスポンス: {jsonResponse}");
-            }
-            OnApiError?.Invoke(errorMessage);
         }
 
         yield return null;
