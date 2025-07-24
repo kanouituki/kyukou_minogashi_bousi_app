@@ -186,7 +186,7 @@ public sealed class Game : GameBase
             HandleTokenInput();
         }
 
-        distance = CalculateDistance(recorded_lat, recorded_lng, gc.GeolocationLastLatitude, gc.GeolocationLastLongitude);
+        distance = CalculateDistance(recorded_lat, recorded_lng, lat, lng);
 
         // 通学時間入力エリア
         if (touch_object(commute_input_area))
