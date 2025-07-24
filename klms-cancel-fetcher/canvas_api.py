@@ -1,5 +1,6 @@
-import requests
 from datetime import datetime, timedelta
+
+import requests
 from config import Config, get_logger
 
 logger = get_logger(__name__)
