@@ -25,8 +25,9 @@ public sealed class Game : GameBase
     string commuteTimeInput = "";
     int savedCommuteTime = 0;
     bool isCommuteInputActive = false;
+    TouchScreenKeyboard? commuteKeyboard = null;
 
-    GcRect commute_input_area = new GcRect(0, 450, 300, 40);
+    GcRect commute_input_area = new GcRect(50, 650, 300, 40);
 
     // 休講情報関連
     KyukouApiClient? kyukouApiClient;
@@ -39,15 +40,17 @@ public sealed class Game : GameBase
     string savedCanvasToken = "";
     bool isTokenInputActive = false;
     bool showTokenInput = false;
+    TouchScreenKeyboard? mobileKeyboard = null;
 
     string kyukouNotification = ""; // 画面表示用
     bool hasNotifiedToday = false;  // 一度だけ通知する
 
-    GcRect record_button = new GcRect(50, 300, 150, 50);
-    GcRect kyukou_button = new GcRect(220, 300, 150, 50);
-    GcRect token_toggle_button = new GcRect(400, 300, 120, 50);
-    GcRect token_input_area = new GcRect(50, 400, 300, 40);
-    GcRect token_save_button = new GcRect(370, 400, 80, 40);
+    // UIレイアウトの改善
+    GcRect record_button = new GcRect(50, 100, 200, 60);
+    GcRect kyukou_button = new GcRect(50, 180, 200, 60);
+    GcRect token_toggle_button = new GcRect(50, 260, 200, 60);
+    GcRect token_input_area = new GcRect(50, 750, 400, 50);
+    GcRect token_save_button = new GcRect(470, 750, 100, 50);
 
     /// <summary>
     /// 初期化処理
@@ -128,15 +131,19 @@ public sealed class Game : GameBase
 
         if (touch_object(record_button))
         {
-            text = "recorded";
-
-            if (gc.HasGeolocationUpdate)
+            if (gc.GetPointerFrameCount(0) == 1)
             {
-                gc.Save("recorded_lat", gc.GeolocationLastLatitude);
-                gc.Save("recorded_lng", gc.GeolocationLastLongitude);
+                // 現在の緯度経度を直接保存
+                gc.Save("recorded_lat", lat);
+                gc.Save("recorded_lng", lng);
+                
+                // 保存した値を読み込んで確認
+                gc.TryLoad("recorded_lat", out recorded_lat);
+                gc.TryLoad("recorded_lng", out recorded_lng);
+                
+                text = $"位置を記録しました ({lat:F4}, {lng:F4})";
+                Debug.Log($"位置記録: lat={lat}, lng={lng}");
             }
-            gc.TryLoad("recorded_lat", out recorded_lat);
-            gc.TryLoad("recorded_lng", out recorded_lng);
         }
 
         // 休講情報取得ボタン（タップ時のみ実行）
@@ -179,7 +186,7 @@ public sealed class Game : GameBase
             HandleTokenInput();
         }
 
-        distance = CalculateDistance(recorded_lat, recorded_lng, gc.GeolocationLastLatitude, gc.GeolocationLastLongitude);
+        distance = CalculateDistance(recorded_lat, recorded_lng, lat, lng);
 
         // 通学時間入力エリア
         if (touch_object(commute_input_area))
@@ -188,12 +195,39 @@ public sealed class Game : GameBase
             {
                 isCommuteInputActive = true;
                 Debug.Log("通学時間入力がアクティブになりました");
+                
+                // モバイルキーボードを開く
+                #if UNITY_IOS || UNITY_ANDROID
+                commuteKeyboard = TouchScreenKeyboard.Open(commuteTimeInput, TouchScreenKeyboardType.NumberPad, false, false, false);
+                #endif
             }
         }
 
         // 入力中の通学時間にキーボード入力処理
         if (isCommuteInputActive)
         {
+            #if UNITY_IOS || UNITY_ANDROID
+            // モバイルキーボードからの入力を取得
+            if (commuteKeyboard != null)
+            {
+                if (commuteKeyboard.status == TouchScreenKeyboard.Status.Done)
+                {
+                    commuteTimeInput = commuteKeyboard.text;
+                    SaveCommuteTime();
+                    commuteKeyboard = null;
+                }
+                else if (commuteKeyboard.status == TouchScreenKeyboard.Status.Canceled)
+                {
+                    isCommuteInputActive = false;
+                    commuteKeyboard = null;
+                }
+                else if (commuteKeyboard.active)
+                {
+                    commuteTimeInput = commuteKeyboard.text;
+                }
+            }
+            #else
+            // PC用のキーボード入力処理
             if (gc.TryGetKeyEventAll(GcKeyEventPhase.Down, out var keyEvents))
             {
                 foreach (var keyEvent in keyEvents)
@@ -217,6 +251,7 @@ public sealed class Game : GameBase
                     }
                 }
             }
+            #endif
         }
     }
 
@@ -227,7 +262,7 @@ public sealed class Game : GameBase
     {
         gc.ClearScreen();
         gc.SetColor(0, 0, 0);
-        gc.DrawString(text, 0, 0);
+        gc.DrawString(text, 50, 30);
 
         // 位置記録ボタン
         gc.SetColor(100, 100, 100);
@@ -241,42 +276,35 @@ public sealed class Game : GameBase
         gc.SetColor(255, 255, 255);
         gc.DrawString("休講情報", kyukou_button.Position.x + 10, kyukou_button.Position.y + 30);
 
-        // デバッグ用: ボタンの座標を表示
-        gc.SetColor(0, 0, 0);
-        gc.DrawString($"ボタン位置: X={kyukou_button.Position.x}, Y={kyukou_button.Position.y}", 0, 520);
-
-        // デバッグ用: マウス座標を表示
-        float mouseX = gc.GetPointerX(0);
-        float mouseY = gc.GetPointerY(0);
-        gc.DrawString($"マウス位置: X={mouseX}, Y={mouseY}", 0, 550);
+        // デバッグ表示は削除
 
         // 位置情報表示
         gc.SetColor(0, 0, 0);
-        gc.DrawString("記録された緯度:" + recorded_lat.ToString(), 0, 180);
-        gc.DrawString("記録された経度:" + recorded_lng.ToString(), 0, 210);
-        gc.DrawString("現在地までの距離：" + distance.ToString("F1") + "m", 0, 240);
+        gc.DrawString("記録された緯度:" + recorded_lat.ToString(), 50, 350);
+        gc.DrawString("記録された経度:" + recorded_lng.ToString(), 50, 380);
+        gc.DrawString("現在地までの距離：" + distance.ToString("F1") + "m", 50, 410);
 
         // 休講情報表示
-        gc.DrawString(kyukouText, 0, 280);
+        gc.DrawString(kyukouText, 50, 450);
 
         // 休講詳細表示
         if (lastKyukouResponse != null && lastKyukouResponse.cancellations.Length > 0)
         {
-            int yOffset = 320;
-            gc.DrawString("=== 休講一覧 ===", 0, yOffset);
+            int yOffset = 490;
+            gc.DrawString("=== 休講一覧 ===", 50, yOffset);
             yOffset += 30;
 
             for (int i = 0; i < lastKyukouResponse.cancellations.Length && i < 5; i++) // 最大5件表示
             {
                 var cancel = lastKyukouResponse.cancellations[i];
-                gc.DrawString($"{cancel.course}", 0, yOffset);
-                gc.DrawString($"{cancel.date} {cancel.period}", 0, yOffset + 20);
+                gc.DrawString($"{cancel.course}", 50, yOffset);
+                gc.DrawString($"{cancel.date} {cancel.period}", 50, yOffset + 20);
                 yOffset += 50;
             }
 
             if (lastKyukouResponse.cancellations.Length > 5)
             {
-                gc.DrawString($"...他{lastKyukouResponse.cancellations.Length - 5}件", 0, yOffset);
+                gc.DrawString($"...他{lastKyukouResponse.cancellations.Length - 5}件", 50, yOffset);
             }
         }
 
@@ -288,25 +316,27 @@ public sealed class Game : GameBase
 
         // 現在のトークン状態表示
         gc.SetColor(0, 0, 0);
-        gc.DrawString($"Canvas API: {GetMaskedToken(savedCanvasToken)}", 0, 360);
-
-        // トークン入力UI（表示時のみ）
-        if (showTokenInput)
-        {
-            DrawTokenInputUI();
-        }
+        gc.DrawString($"Canvas API: {GetMaskedToken(savedCanvasToken)}", 50, 490);
 
         // 通学時間設定ボタン
         DrawCommuteTimeInputUI();
+        
+        // 休講通知表示
         if (!string.IsNullOrEmpty(kyukouNotification))
         {
             gc.SetColor(255, 0, 0);
-            gc.DrawString(kyukouNotification, 0, 620);
+            gc.DrawString(kyukouNotification, 50, 550);
         }
         else
         {
             gc.SetColor(0, 0, 0);
-            gc.DrawString("休講予定はありません", 0, 620);
+            gc.DrawString("休講予定はありません", 50, 550);
+        }
+        
+        // トークン入力UI（表示時のみ）
+        if (showTokenInput)
+        {
+            DrawTokenInputUI();
         }
 
         CheckKyukouNotification();
@@ -381,6 +411,11 @@ public sealed class Game : GameBase
             {
                 isTokenInputActive = true;
                 Debug.Log("トークン入力がアクティブになりました");
+                
+                // モバイルキーボードを開く
+                #if UNITY_IOS || UNITY_ANDROID
+                mobileKeyboard = TouchScreenKeyboard.Open(canvasTokenInput, TouchScreenKeyboardType.Default, false, false, true);
+                #endif
             }
         }
 
@@ -396,7 +431,29 @@ public sealed class Game : GameBase
         // キーボード入力処理（アクティブ時のみ）
         if (isTokenInputActive)
         {
+            #if UNITY_IOS || UNITY_ANDROID
+            // モバイルキーボードからの入力を取得
+            if (mobileKeyboard != null)
+            {
+                if (mobileKeyboard.status == TouchScreenKeyboard.Status.Done)
+                {
+                    canvasTokenInput = mobileKeyboard.text;
+                    SaveCanvasToken();
+                    mobileKeyboard = null;
+                }
+                else if (mobileKeyboard.status == TouchScreenKeyboard.Status.Canceled)
+                {
+                    isTokenInputActive = false;
+                    mobileKeyboard = null;
+                }
+                else if (mobileKeyboard.active)
+                {
+                    canvasTokenInput = mobileKeyboard.text;
+                }
+            }
+            #else
             ProcessKeyboardInput();
+            #endif
         }
     }
 
@@ -477,11 +534,11 @@ public sealed class Game : GameBase
     {
         // 背景
         gc.SetColor(240, 240, 240);
-        gc.FillRect(new GcRect(30, 380, 500, 120));
+        gc.FillRect(new GcRect(30, 700, 550, 150));
 
         // タイトル
         gc.SetColor(0, 0, 0);
-        gc.DrawString("Canvas APIトークン入力:", 40, 390);
+        gc.DrawString("Canvas APIトークン入力:", 40, 720);
 
         // 入力フィールド
         if (isTokenInputActive)
@@ -519,12 +576,12 @@ public sealed class Game : GameBase
 
         // 操作説明
         gc.SetColor(100, 100, 100);
-        gc.DrawString("Enter: 保存 / Esc: キャンセル", 40, 480);
+        gc.DrawString("Enter: 保存 / Esc: キャンセル", 40, 820);
     }
     void DrawCommuteTimeInputUI()
     {
         gc.SetColor(0, 0, 0);
-        gc.DrawString("通学時間（分）を入力:", 0, 410);
+        gc.DrawString("通学時間（分）を入力:", 50, 610);
 
         if (isCommuteInputActive)
             gc.SetColor(255, 255, 200);
@@ -534,13 +591,13 @@ public sealed class Game : GameBase
         gc.SetColor(0, 0, 0);
         gc.DrawRect(commute_input_area);
 
-        string display = isCommuteInputActive == true ? commuteTimeInput : $"{savedCommuteTime} ";
-        gc.DrawString(display, commute_input_area.Position.x, commute_input_area.Position.y + 10);
+        string display = isCommuteInputActive == true ? commuteTimeInput : $"{savedCommuteTime}";
+        gc.DrawString(display + "分", commute_input_area.Position.x + 10, commute_input_area.Position.y + 12);
 
         if (isCommuteInputActive && (Time.time * 2) % 2 < 1)
         {
-            float cursorX = commute_input_area.Position.x + display.Length * 8;
-            gc.DrawString("|", cursorX, commute_input_area.Position.y + 10);
+            float cursorX = commute_input_area.Position.x + 10 + display.Length * 8;
+            gc.DrawString("|", cursorX, commute_input_area.Position.y + 12);
         }
     }
 

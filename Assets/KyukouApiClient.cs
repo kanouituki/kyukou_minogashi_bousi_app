@@ -12,7 +12,7 @@ using KyukouApp;
 public class KyukouApiClient : MonoBehaviour
 {
     [Header("API設定")]
-    [SerializeField] private string apiBaseUrl = "http://localhost:8000";
+    [SerializeField] private string apiBaseUrl = "http://192.168.0.2:8000";
     [SerializeField] private float timeoutSeconds = 30f;
     [SerializeField] private bool useLatestCache = true;
 
