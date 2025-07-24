@@ -25,6 +25,7 @@ public sealed class Game : GameBase
     string commuteTimeInput = "";
     int savedCommuteTime = 0;
     bool isCommuteInputActive = false;
+    TouchScreenKeyboard? commuteKeyboard = null;
 
     GcRect commute_input_area = new GcRect(50, 650, 300, 40);
 
@@ -39,6 +40,7 @@ public sealed class Game : GameBase
     string savedCanvasToken = "";
     bool isTokenInputActive = false;
     bool showTokenInput = false;
+    TouchScreenKeyboard? mobileKeyboard = null;
 
     string kyukouNotification = ""; // 画面表示用
     bool hasNotifiedToday = false;  // 一度だけ通知する
@@ -129,15 +131,19 @@ public sealed class Game : GameBase
 
         if (touch_object(record_button))
         {
-            text = "recorded";
-
-            if (gc.HasGeolocationUpdate)
+            if (gc.GetPointerFrameCount(0) == 1)
             {
-                gc.Save("recorded_lat", gc.GeolocationLastLatitude);
-                gc.Save("recorded_lng", gc.GeolocationLastLongitude);
+                // 現在の緯度経度を直接保存
+                gc.Save("recorded_lat", lat);
+                gc.Save("recorded_lng", lng);
+                
+                // 保存した値を読み込んで確認
+                gc.TryLoad("recorded_lat", out recorded_lat);
+                gc.TryLoad("recorded_lng", out recorded_lng);
+                
+                text = $"位置を記録しました ({lat:F4}, {lng:F4})";
+                Debug.Log($"位置記録: lat={lat}, lng={lng}");
             }
-            gc.TryLoad("recorded_lat", out recorded_lat);
-            gc.TryLoad("recorded_lng", out recorded_lng);
         }
 
         // 休講情報取得ボタン（タップ時のみ実行）
@@ -189,12 +195,39 @@ public sealed class Game : GameBase
             {
                 isCommuteInputActive = true;
                 Debug.Log("通学時間入力がアクティブになりました");
+                
+                // モバイルキーボードを開く
+                #if UNITY_IOS || UNITY_ANDROID
+                commuteKeyboard = TouchScreenKeyboard.Open(commuteTimeInput, TouchScreenKeyboardType.NumberPad, false, false, false);
+                #endif
             }
         }
 
         // 入力中の通学時間にキーボード入力処理
         if (isCommuteInputActive)
         {
+            #if UNITY_IOS || UNITY_ANDROID
+            // モバイルキーボードからの入力を取得
+            if (commuteKeyboard != null)
+            {
+                if (commuteKeyboard.status == TouchScreenKeyboard.Status.Done)
+                {
+                    commuteTimeInput = commuteKeyboard.text;
+                    SaveCommuteTime();
+                    commuteKeyboard = null;
+                }
+                else if (commuteKeyboard.status == TouchScreenKeyboard.Status.Canceled)
+                {
+                    isCommuteInputActive = false;
+                    commuteKeyboard = null;
+                }
+                else if (commuteKeyboard.active)
+                {
+                    commuteTimeInput = commuteKeyboard.text;
+                }
+            }
+            #else
+            // PC用のキーボード入力処理
             if (gc.TryGetKeyEventAll(GcKeyEventPhase.Down, out var keyEvents))
             {
                 foreach (var keyEvent in keyEvents)
@@ -218,6 +251,7 @@ public sealed class Game : GameBase
                     }
                 }
             }
+            #endif
         }
     }
 
@@ -377,6 +411,11 @@ public sealed class Game : GameBase
             {
                 isTokenInputActive = true;
                 Debug.Log("トークン入力がアクティブになりました");
+                
+                // モバイルキーボードを開く
+                #if UNITY_IOS || UNITY_ANDROID
+                mobileKeyboard = TouchScreenKeyboard.Open(canvasTokenInput, TouchScreenKeyboardType.Default, false, false, true);
+                #endif
             }
         }
 
@@ -392,7 +431,29 @@ public sealed class Game : GameBase
         // キーボード入力処理（アクティブ時のみ）
         if (isTokenInputActive)
         {
+            #if UNITY_IOS || UNITY_ANDROID
+            // モバイルキーボードからの入力を取得
+            if (mobileKeyboard != null)
+            {
+                if (mobileKeyboard.status == TouchScreenKeyboard.Status.Done)
+                {
+                    canvasTokenInput = mobileKeyboard.text;
+                    SaveCanvasToken();
+                    mobileKeyboard = null;
+                }
+                else if (mobileKeyboard.status == TouchScreenKeyboard.Status.Canceled)
+                {
+                    isTokenInputActive = false;
+                    mobileKeyboard = null;
+                }
+                else if (mobileKeyboard.active)
+                {
+                    canvasTokenInput = mobileKeyboard.text;
+                }
+            }
+            #else
             ProcessKeyboardInput();
+            #endif
         }
     }
 

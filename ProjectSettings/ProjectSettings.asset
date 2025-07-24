@@ -700,7 +700,7 @@ PlayerSettings:
   logObjCUncaughtExceptions: 1
   enableCrashReportAPI: 0
   cameraUsageDescription: made by GameCanvas
-  locationUsageDescription: made by GameCanvas
+  locationUsageDescription: このアプリは休講情報の自動通知のため、あなたの現在位置を使用します。キャンパスからの距離を計算し、休講時の不要な通学を防ぎます。
   microphoneUsageDescription: made by GameCanvas
   bluetoothUsageDescription: 
   switchNMETAOverride: 
