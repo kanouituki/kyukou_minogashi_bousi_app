@@ -287,10 +287,10 @@ public sealed class Game : GameBase
         // 休講情報表示
         gc.DrawString(kyukouText, 50, 450);
 
-        // 休講詳細表示
+        // 休講詳細表示（通学時間入力エリアの下に移動）
         if (lastKyukouResponse != null && lastKyukouResponse.cancellations.Length > 0)
         {
-            int yOffset = 490;
+            int yOffset = 720;  // もう少し下に配置
             gc.DrawString("=== 休講一覧 ===", 50, yOffset);
             yOffset += 30;
 
@@ -298,7 +298,7 @@ public sealed class Game : GameBase
             {
                 var cancel = lastKyukouResponse.cancellations[i];
                 gc.DrawString($"{cancel.course}", 50, yOffset);
-                gc.DrawString($"{cancel.date} {cancel.period}", 50, yOffset + 20);
+                gc.DrawString($"    {cancel.date} {cancel.period}", 50, yOffset + 20);  // インデント追加
                 yOffset += 50;
             }
 
