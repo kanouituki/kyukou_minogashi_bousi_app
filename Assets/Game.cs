@@ -4,6 +4,7 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using KyukouApp;
+using System;
 
 /// <summary>
 /// ゲームクラス。
@@ -38,6 +39,9 @@ public sealed class Game : GameBase
     string savedCanvasToken = "";
     bool isTokenInputActive = false;
     bool showTokenInput = false;
+
+    string kyukouNotification = ""; // 画面表示用
+    bool hasNotifiedToday = false;  // 一度だけ通知する
 
     GcRect record_button = new GcRect(50, 300, 150, 50);
     GcRect kyukou_button = new GcRect(220, 300, 150, 50);
@@ -294,6 +298,18 @@ public sealed class Game : GameBase
 
         // 通学時間設定ボタン
         DrawCommuteTimeInputUI();
+        if (!string.IsNullOrEmpty(kyukouNotification))
+        {
+            gc.SetColor(255, 0, 0);
+            gc.DrawString(kyukouNotification, 0, 620);
+        }
+        else
+        {
+            gc.SetColor(0, 0, 0);
+            gc.DrawString("休講予定はありません", 0, 620);
+        }
+
+        CheckKyukouNotification();
     }
 
 
@@ -333,6 +349,7 @@ public sealed class Game : GameBase
         if (response.summary.total_cancellations > 0)
         {
             kyukouText = $"休講情報: {response.summary.total_cancellations}件の休講があります";
+
         }
         else
         {
@@ -517,7 +534,7 @@ public sealed class Game : GameBase
         gc.SetColor(0, 0, 0);
         gc.DrawRect(commute_input_area);
 
-        string display =  isCommuteInputActive == true ? commuteTimeInput : $"{savedCommuteTime} ";
+        string display = isCommuteInputActive == true ? commuteTimeInput : $"{savedCommuteTime} ";
         gc.DrawString(display, commute_input_area.Position.x, commute_input_area.Position.y + 10);
 
         if (isCommuteInputActive && (Time.time * 2) % 2 < 1)
@@ -542,5 +559,62 @@ public sealed class Game : GameBase
             Debug.Log("無効な数値です");
         }
     }
+
+    void CheckKyukouNotification()
+    {
+        if (lastKyukouResponse == null || lastKyukouResponse.cancellations.Length == 0)
+            return;
+
+        if (!gc.HasGeolocationUpdate || hasNotifiedToday)
+            return;
+
+        var now = DateTime.Now;
+        string today = now.ToString("yyyy-MM-dd");
+
+        foreach (var cancel in lastKyukouResponse.cancellations)
+        {
+            if (cancel.date != today) continue;
+
+            var startTime = GetStartTimeForPeriod(cancel.period, now);
+            if (startTime == DateTime.MinValue) continue;
+
+            // 出発すべき時刻（授業開始 - 通学時間）
+            var departTime = startTime.AddMinutes(-savedCommuteTime);
+
+            // 許容範囲 ±5分
+            var rangeStart = departTime.AddMinutes(-5);
+            var rangeEnd = departTime.AddMinutes(5);
+
+            if (now >= rangeStart && now <= rangeEnd)
+            {
+                float d = CalculateDistance(recorded_lat, recorded_lng, lat, lng);
+                if (d >= 500f)
+                {
+                    kyukouNotification = $"休講 ({cancel.course})：出発時間です！現在地が500m以上離れています（{d:F1}m）";
+                    hasNotifiedToday = true;
+                    Debug.Log(kyukouNotification);
+                }
+            }
+        }
+    }
+
+    
+    DateTime GetStartTimeForPeriod(string period, DateTime day)
+    {
+        return period switch
+        {
+            "1" => new DateTime(day.Year, day.Month, day.Day, 9, 25, 0),
+            "2" => new DateTime(day.Year, day.Month, day.Day, 11, 10, 0),
+            "3" => new DateTime(day.Year, day.Month, day.Day, 13, 0, 0),
+            "4" => new DateTime(day.Year, day.Month, day.Day, 14, 45, 0),
+            "5" => new DateTime(day.Year, day.Month, day.Day, 16, 30, 0),
+            "6" => new DateTime(day.Year, day.Month, day.Day, 18, 0, 0),
+            _ => DateTime.MinValue
+        };
+    }
+
+
+
+
 
 }
