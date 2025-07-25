@@ -75,7 +75,8 @@ public class KyukouApiClient : MonoBehaviour
         IsLoading = true;
 
         // エンドポイントURLを決定
-        string endpoint = useLatestCache && !forceRefresh ? "/api/kyukou/latest" : "/api/kyukou";
+        // Canvas APIトークンがある場合はリアルタイム取得を優先
+        string endpoint = (!string.IsNullOrEmpty(apiToken) || forceRefresh) ? "/api/kyukou" : "/api/kyukou/latest";
         string url = $"{apiBaseUrl}{endpoint}";
 
         // クエリパラメータ追加

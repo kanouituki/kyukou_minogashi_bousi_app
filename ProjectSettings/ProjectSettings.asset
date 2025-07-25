@@ -156,8 +156,8 @@ PlayerSettings:
     Android: jp.ac.keio.sfc.sdp
     Standalone: jp.ac.keio.sfc.sdp
     Tizen: jp.ac.keio.sfc.sdp
-    WebGL: jp.ac.keio.sfc.sdp
     iPhone: jp.ac.keio.sfc.sdp
+    WebGL: jp.ac.keio.sfc.sdp
     tvOS: jp.ac.keio.sfc.sdp
   buildNumber:
     Standalone: 0
@@ -228,7 +228,7 @@ PlayerSettings:
   metalAPIValidation: 1
   iOSRenderExtraFrameOnPause: 1
   iosCopyPluginsCodeInsteadOfSymlink: 0
-  appleDeveloperTeamID: 
+  appleDeveloperTeamID: KLT864MY7Z
   iOSManualSigningProvisioningProfileID: 
   tvOSManualSigningProvisioningProfileID: 
   iOSManualSigningProvisioningProfileType: 0

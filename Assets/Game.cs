@@ -305,6 +305,76 @@ public sealed class Game : GameBase
             if (lastKyukouResponse.cancellations.Length > 5)
             {
                 gc.DrawString($"...他{lastKyukouResponse.cancellations.Length - 5}件", 50, yOffset);
+                yOffset += 30;
+            }
+        }
+        
+        // API取得データの詳細表示（休講一覧の下に移動）
+        if (lastKyukouResponse != null)
+        {
+            int debugYOffset = lastKyukouResponse.cancellations.Length > 0 ? 
+                (720 + 30 + Math.Min(lastKyukouResponse.cancellations.Length, 5) * 50 + 50) : 720;
+            
+            gc.SetColor(0, 100, 0);
+            gc.DrawString($"--- API応答詳細 ---", 50, debugYOffset);
+            gc.DrawString($"総コース数={lastKyukouResponse.summary.total_courses}", 50, debugYOffset + 20);
+            gc.DrawString($"休講件数={lastKyukouResponse.summary.total_cancellations}", 50, debugYOffset + 40);
+            
+            // チェックした全コースの表示（縦に1行ずつ）
+            gc.SetColor(0, 80, 0);  // 少し薄い色で小さく見せる
+            gc.DrawString("チェック対象コース一覧:", 50, debugYOffset + 60);
+            
+            int courseListOffset = debugYOffset + 80;
+            if (lastKyukouResponse.cancellations.Length > 0)
+            {
+                // 休講があるコースから全コース名を推測表示
+                var uniqueCourses = new System.Collections.Generic.HashSet<string>();
+                foreach (var cancel in lastKyukouResponse.cancellations)
+                {
+                    if (!string.IsNullOrEmpty(cancel.course_name))
+                    {
+                        uniqueCourses.Add(cancel.course_name);
+                    }
+                }
+                
+                int i = 0;
+                foreach (var courseName in uniqueCourses)
+                {
+                    string displayName = courseName.Length > 20 ? courseName.Substring(0, 17) + "..." : courseName;
+                    gc.DrawString($"  • {displayName}", 50, courseListOffset + (i * 35));  // 25→35に変更
+                    i++;
+                }
+                
+                // 他のコースがあることを示す
+                if (uniqueCourses.Count < lastKyukouResponse.summary.total_courses)
+                {
+                    gc.DrawString($"  • その他{lastKyukouResponse.summary.total_courses - uniqueCourses.Count}コース", 50, courseListOffset + (i * 35));  // 25→35に変更
+                }
+            }
+            else
+            {
+                // 休講がない場合の表示
+                gc.DrawString("  • 実際の授業データを取得中...", 50, courseListOffset);
+                gc.DrawString("  • （休講発生時に授業名を表示）", 50, courseListOffset + 35);
+            }
+            
+            // 休講があったコースのみ
+            if (lastKyukouResponse.cancellations.Length > 0)
+            {
+                string cancelCourses = "休講コース: ";
+                var canceledCourses = new System.Collections.Generic.HashSet<string>();
+                foreach (var cancel in lastKyukouResponse.cancellations)
+                {
+                    if (!string.IsNullOrEmpty(cancel.course_name))
+                    {
+                        string shortName = cancel.course_name.Length > 6 ? 
+                            cancel.course_name.Substring(0, 6) + "..." : cancel.course_name;
+                        canceledCourses.Add(shortName);
+                    }
+                }
+                cancelCourses += string.Join(", ", canceledCourses);
+                string shortCancelCourses = cancelCourses.Length > 40 ? cancelCourses.Substring(0, 37) + "..." : cancelCourses;
+                gc.DrawString(shortCancelCourses, 50, debugYOffset + 80);
             }
         }
 
@@ -452,7 +522,51 @@ public sealed class Game : GameBase
                 }
             }
             #else
-            ProcessKeyboardInput();
+            // PC用のキーボード入力処理（コピペ対応）
+            if (gc.TryGetKeyEventAll(GcKeyEventPhase.Down, out var keyEvents))
+            {
+                foreach (var keyEvent in keyEvents)
+                {
+                    // Ctrl+V でクリップボードから貼り付け
+                    if ((keyEvent.Key == Key.V) && (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
+                    {
+                        string clipboardText = GUIUtility.systemCopyBuffer;
+                        if (!string.IsNullOrEmpty(clipboardText))
+                        {
+                            canvasTokenInput = clipboardText;
+                            Debug.Log("クリップボードからトークンを貼り付けました");
+                        }
+                    }
+                    // Ctrl+A で全選択（次の文字入力で上書きされる）
+                    else if ((keyEvent.Key == Key.A) && (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
+                    {
+                        // 全選択状態をフラグで管理
+                        canvasTokenInput = "";
+                        Debug.Log("テキストを全選択しました");
+                    }
+                    // 通常の文字入力
+                    else if (keyEvent.Key.TryGetChar(out char c) && (char.IsLetterOrDigit(c) || char.IsPunctuation(c) || char.IsSymbol(c)) && canvasTokenInput.Length < 100)
+                    {
+                        canvasTokenInput += c;
+                        Debug.Log($"文字入力: {c}");
+                    }
+                    else if (keyEvent.Key == Key.Backspace && canvasTokenInput.Length > 0)
+                    {
+                        canvasTokenInput = canvasTokenInput.Substring(0, canvasTokenInput.Length - 1);
+                        Debug.Log("バックスペース");
+                    }
+                    else if (keyEvent.Key == Key.Enter)
+                    {
+                        SaveCanvasToken();
+                    }
+                    else if (keyEvent.Key == Key.Escape)
+                    {
+                        isTokenInputActive = false;
+                        canvasTokenInput = "";
+                        Debug.Log("入力をキャンセルしました");
+                    }
+                }
+            }
             #endif
         }
     }
@@ -576,7 +690,7 @@ public sealed class Game : GameBase
 
         // 操作説明
         gc.SetColor(100, 100, 100);
-        gc.DrawString("Enter: 保存 / Esc: キャンセル", 40, 820);
+        gc.DrawString("Enter: 保存 / Esc: キャンセル / Ctrl+V: 貼り付け", 40, 820);
     }
     void DrawCommuteTimeInputUI()
     {
