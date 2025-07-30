@@ -104,3 +104,4 @@ klms-cancel-fetcher/results/*.json
 
 # 開発用設定ファイル
 CLAUDE.md
+SECURITY.md

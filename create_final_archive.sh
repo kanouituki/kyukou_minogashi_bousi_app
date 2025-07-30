@@ -18,7 +18,6 @@ echo "📁 重要ファイルをコピー中..."
 
 # プロジェクトルート
 cp README.md "$ARCHIVE_DIR/" 2>/dev/null || echo "⚠️ README.md not found"
-cp SECURITY.md "$ARCHIVE_DIR/" 2>/dev/null || echo "⚠️ SECURITY.md not found"
 cp LICENSE "$ARCHIVE_DIR/" 2>/dev/null || echo "⚠️ LICENSE not found"
 cp LICENSE_JP "$ARCHIVE_DIR/" 2>/dev/null || echo "⚠️ LICENSE_JP not found"
 
