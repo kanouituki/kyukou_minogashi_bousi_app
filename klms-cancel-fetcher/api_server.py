@@ -9,13 +9,21 @@ import os
 import json
 from datetime import datetime
 from typing import Optional, Dict, Any
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from canvas_api import get_courses, get_announcements
 from gpt_analyzer import analyze_announcement
 from cache_manager import load_cache, save_cache, get_new_announcements, update_cache_with_announcements
 from config import Config, get_logger
+from api_validation import (
+    validate_canvas_token, 
+    check_rate_limit, 
+    validate_request_parameters,
+    sanitize_error_message,
+    log_security_event,
+    clean_rate_limit_cache
+)
 
 logger = get_logger(__name__)
 
@@ -26,13 +34,30 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS設定（Unity等からのアクセスを許可）
+# CORS設定（セキュリティ強化）
+# 本番環境では必要なオリジンのみ許可
+allowed_origins = []
+if os.getenv("ENVIRONMENT") == "production":
+    # 本番環境では実際のドメインを指定
+    allowed_origins = [
+        "https://your-domain.com",
+        "https://app.your-domain.com"
+    ]
+else:
+    # 開発環境では localhost を許可
+    allowed_origins = [
+        "http://localhost:3000",
+        "http://localhost:8080",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:8080"
+    ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 本番環境では適切なオリジンを指定
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=allowed_origins,
+    allow_credentials=False,  # APIキーを使用するためクレデンシャルは不要
+    allow_methods=["GET", "POST"],  # 必要なメソッドのみ許可
+    allow_headers=["Content-Type", "Authorization"],  # 必要なヘッダーのみ許可
 )
 
 @app.get("/")
@@ -57,21 +82,45 @@ async def health_check():
 
 @app.get("/api/kyukou")
 async def get_kyukou_info(
+    request: Request,
     canvas_token: Optional[str] = Query(None, description="Canvas APIトークン"),
     force_refresh: bool = Query(False, description="キャッシュを無視して強制的に最新情報を取得")
 ):
     """
-    休講情報を取得するAPIエンドポイント
+    休講情報を取得するAPIエンドポイント（セキュリティ強化版）
     
     Args:
+        request: FastAPIリクエストオブジェクト
         canvas_token: Canvas APIトークン（ユーザー提供）
         force_refresh: キャッシュを無視するかどうか
     
     Returns:
         Dict: 休講情報のJSON
     """
+    client_ip = request.client.host if request.client else "unknown"
+    
     try:
-        logger.info(f"休講情報取得API呼び出し - canvas_token: {'あり' if canvas_token else 'なし'}, force_refresh: {force_refresh}")
+        # レート制限チェック
+        is_allowed, rate_error = check_rate_limit(client_ip, max_requests=30, window_minutes=1)
+        if not is_allowed:
+            log_security_event("rate_limit_exceeded", {"client_ip": client_ip}, client_ip)
+            raise HTTPException(status_code=429, detail=rate_error)
+        
+        # リクエストパラメータの検証
+        params = {"canvas_token": canvas_token, "force_refresh": force_refresh}
+        is_valid, param_error = validate_request_parameters(params)
+        if not is_valid:
+            log_security_event("invalid_parameters", {"error": param_error, "client_ip": client_ip}, client_ip)
+            raise HTTPException(status_code=400, detail=sanitize_error_message(param_error))
+        
+        # Canvas APIトークンの検証（提供された場合のみ）
+        if canvas_token:
+            is_valid_token, token_error = validate_canvas_token(canvas_token)
+            if not is_valid_token:
+                log_security_event("invalid_token", {"error": token_error, "client_ip": client_ip}, client_ip)
+                raise HTTPException(status_code=400, detail=f"APIトークンエラー: {token_error}")
+        
+        logger.info(f"休講情報取得API呼び出し - クライアント: {client_ip}, canvas_token: {'あり' if canvas_token else 'なし'}, force_refresh: {force_refresh}")
         
         # 結果を保存するディレクトリを作成
         os.makedirs(Config.RESULTS_DIR, exist_ok=True)
