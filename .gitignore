@@ -101,3 +101,6 @@ klms-cancel-fetcher/data/cache.json
 klms-cancel-fetcher/logs/*.log
 klms-cancel-fetcher/server.log
 klms-cancel-fetcher/results/*.json
+
+# 開発用設定ファイル
+CLAUDE.md
