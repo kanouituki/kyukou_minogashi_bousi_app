@@ -7,6 +7,12 @@ import tempfile
 import os
 from unittest.mock import Mock
 
+# テスト用環境変数を設定
+os.environ.setdefault('CANVAS_ACCESS_TOKEN', 'test_token')
+os.environ.setdefault('OPENAI_API_KEY', 'test_openai_key')
+os.environ.setdefault('CANVAS_BASE_URL', 'https://test.instructure.com')
+os.environ.setdefault('LOG_LEVEL', 'DEBUG')
+
 
 @pytest.fixture
 def temp_log_file():

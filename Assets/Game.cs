@@ -203,6 +203,6 @@ public sealed class Game : GameBase
     {
         isLoadingKyukou = false;
         notificationManager?.SetError(errorMessage);
-        Debug.LogError($"休講情報取得エラー: {errorMessage}");
+        ErrorHandler.HandleApiError("休講情報取得", new Exception(errorMessage));
     }
 }

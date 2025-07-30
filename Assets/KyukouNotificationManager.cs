@@ -227,7 +227,7 @@ public class KyukouNotificationManager
     public void SetError(string errorMessage)
     {
         SetNotification($"エラー: {errorMessage}");
-        Debug.LogError($"[KyukouNotificationManager] {errorMessage}");
+        ErrorHandler.HandleNotificationError("エラー通知設定", errorMessage);
     }
     
     /// <summary>

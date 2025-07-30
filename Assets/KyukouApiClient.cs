@@ -153,15 +153,12 @@ public class KyukouApiClient : MonoBehaviour
         catch (Exception e)
         {
             errorMessage = $"レスポンスの解析に失敗しました: {e.Message}";
+            ErrorHandler.HandleApiError("レスポンス解析", e, jsonResponse);
         }
 
         if (errorMessage != null)
         {
-            if (enableDebugLog)
-            {
-                Debug.LogError($"[KyukouApiClient] {errorMessage}");
-                Debug.LogError($"[KyukouApiClient] 生レスポンス: {jsonResponse}");
-            }
+            ErrorHandler.HandleApiError("休講情報取得", new Exception(errorMessage), jsonResponse);
             OnApiError?.Invoke(errorMessage);
         }
         else
@@ -222,11 +219,7 @@ public class KyukouApiClient : MonoBehaviour
                 break;
         }
 
-        if (enableDebugLog)
-        {
-            Debug.LogError($"[KyukouApiClient] {errorMessage}");
-        }
-
+        ErrorHandler.HandleApiError("HTTPリクエスト", new Exception(errorMessage));
         OnApiError?.Invoke(errorMessage);
         yield return null;
     }
@@ -265,10 +258,7 @@ public class KyukouApiClient : MonoBehaviour
             }
             else
             {
-                if (enableDebugLog)
-                {
-                    Debug.LogError($"[KyukouApiClient] サーバー接続失敗: {request.error}");
-                }
+                ErrorHandler.HandleApiError("ヘルスチェック", new Exception($"サーバー接続失敗: {request.error}"));
             }
         }
     }

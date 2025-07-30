@@ -19,7 +19,7 @@ class TestConfig:
     def test_config_attributes(self):
         """Config属性のテスト"""
         # 環境変数から読み込まれた値をテスト
-        assert Config.CANVAS_ACCESS_TOKEN == 'test_canvas_token'
+        assert Config.CANVAS_ACCESS_TOKEN == 'test_token'
         assert Config.OPENAI_API_KEY == 'test_openai_key'
         
         # 定数値をテスト
@@ -130,7 +130,7 @@ class TestConfigIntegration:
         logger = get_logger("integration_test")
         
         # Configが正しく初期化されている
-        assert Config.CANVAS_ACCESS_TOKEN == 'test_canvas_token'
+        assert Config.CANVAS_ACCESS_TOKEN == 'test_token'
         assert Config.OPENAI_API_KEY == 'test_openai_key'
         
         # ロガーが実際に使用可能
