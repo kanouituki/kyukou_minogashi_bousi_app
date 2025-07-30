@@ -1,0 +1,10 @@
+# テスト用依存関係
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-mock>=3.11.1
+pytest-asyncio>=0.21.1
+httpx>=0.24.1  # FastAPI テスト用
+pytest-xdist>=3.3.1  # 並列実行用
+
+# 既存の依存関係（テスト環境でも必要）
+-r requirements.txt

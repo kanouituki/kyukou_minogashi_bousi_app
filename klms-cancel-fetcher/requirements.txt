@@ -2,4 +2,5 @@ python-dotenv
 requests
 openai
 fastapi
-uvicorn 
+uvicorn
+aiohttp>=3.8.0 
