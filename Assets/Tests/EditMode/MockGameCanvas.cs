@@ -5,7 +5,7 @@ using UnityEngine;
 /// <summary>
 /// テスト用のGameCanvasモック実装
 /// </summary>
-public class MockGameCanvas : IGameCanvas
+public class MockGameCanvas : IGameCanvasLite
 {
     private Dictionary<string, object> storage = new Dictionary<string, object>();
     
@@ -23,35 +23,67 @@ public class MockGameCanvas : IGameCanvas
         StartGeolocationServiceCallCount++;
     }
     
-    public void Save<T>(string key, T value)
+    public void Save(string key, string value)
     {
         storage[key] = value;
     }
     
-    public bool TryLoad<T>(string key, out T value)
+    public void Save(string key, float value)
     {
-        if (storage.ContainsKey(key) && storage[key] is T)
+        storage[key] = value;
+    }
+    
+    public void Save(string key, int value)
+    {
+        storage[key] = value;
+    }
+    
+    public bool TryLoad(string key, out string value)
+    {
+        if (storage.ContainsKey(key) && storage[key] is string)
         {
-            value = (T)storage[key];
+            value = (string)storage[key];
             return true;
         }
-        value = default(T);
+        value = default(string);
+        return false;
+    }
+    
+    public bool TryLoad(string key, out float value)
+    {
+        if (storage.ContainsKey(key) && storage[key] is float)
+        {
+            value = (float)storage[key];
+            return true;
+        }
+        value = default(float);
+        return false;
+    }
+    
+    public bool TryLoad(string key, out int value)
+    {
+        if (storage.ContainsKey(key) && storage[key] is int)
+        {
+            value = (int)storage[key];
+            return true;
+        }
+        value = default(int);
         return false;
     }
     
     // 以下は使用しないメソッドのダミー実装
     public void SetResolution(int width, int height) { }
     public void ClearScreen() { }
-    public void SetColor(int r, int g, int b) { }
+    public void SetColor(byte r, byte g, byte b) { }
     public void DrawString(string text, float x, float y) { }
     public void FillRect(GcRect rect) { }
     public void DrawRect(GcRect rect) { }
-    public float GetPointerX(int index) => 0f;
-    public float GetPointerY(int index) => 0f;
-    public int GetPointerFrameCount(int index) => 0;
-    public bool TryGetKeyEventAll(GcKeyEventPhase phase, out GcKeyEvent[] keyEvents) 
+    public float GetPointerX(int pointerId) => 0f;
+    public float GetPointerY(int pointerId) => 0f;
+    public int GetPointerFrameCount(int pointerId) => 0;
+    public bool TryGetKeyEventAll(GcKeyEventPhase phase, out System.ReadOnlySpan<GcKeyEvent> events) 
     { 
-        keyEvents = null; 
+        events = System.ReadOnlySpan<GcKeyEvent>.Empty; 
         return false; 
     }
     

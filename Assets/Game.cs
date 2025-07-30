@@ -12,6 +12,7 @@ using System;
 /// </summary>
 public sealed class Game : GameBase
 {
+    
     // 管理クラス
     private LocationManager? locationManager;
     private SettingsManager? settingsManager;
@@ -44,16 +45,19 @@ public sealed class Game : GameBase
     /// 管理クラスの初期化
     /// </summary>
     void InitializeManagers()
-    {
+    {        
+        // GameCanvasLiteアダプター作成
+        var gameCanvasLite = new GameCanvasLiteAdapter(gc);
+        
         // 位置情報管理の初期化
-        locationManager = new LocationManager(gc);
+        locationManager = new LocationManager(gameCanvasLite);
         locationManager.OnLocationUpdated += OnLocationUpdated;
 
         // 設定管理の初期化
-        settingsManager = new SettingsManager(gc);
+        settingsManager = new SettingsManager(gameCanvasLite);
 
         // UI管理の初期化
-        uiManager = new UIManager(gc);
+        uiManager = new UIManager(gameCanvasLite);
         uiManager.OnRecordButtonClicked += OnRecordButtonClicked;
         uiManager.OnKyukouButtonClicked += OnKyukouButtonClicked;
         uiManager.OnTokenToggleClicked += OnTokenToggleClicked;

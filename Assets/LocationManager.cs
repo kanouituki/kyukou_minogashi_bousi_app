@@ -9,7 +9,7 @@ using System;
 /// </summary>
 public class LocationManager
 {
-    private readonly IGameCanvas gc;
+    private readonly IGameCanvasLite gc;
     
     // 位置情報変数
     private float currentLatitude;
@@ -22,7 +22,7 @@ public class LocationManager
     public event Action<float, float>? OnLocationUpdated;
     public event Action<float, float>? OnLocationRecorded;
     
-    public LocationManager(IGameCanvas gameCanvas)
+    public LocationManager(IGameCanvasLite gameCanvas)
     {
         gc = gameCanvas ?? throw new ArgumentNullException(nameof(gameCanvas));
         

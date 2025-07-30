@@ -11,7 +11,7 @@ using KyukouApp;
 /// </summary>
 public class UIManager
 {
-    private readonly IGameCanvas gc;
+    private readonly IGameCanvasLite gc;
     
     // UI要素の位置とサイズ
     private readonly GcRect recordButton = new GcRect(50, 100, 200, 60);
@@ -39,7 +39,7 @@ public class UIManager
     public event Action<string>? OnTokenSaved;
     public event Action<int>? OnCommuteTimeSaved;
     
-    public UIManager(IGameCanvas gameCanvas)
+    public UIManager(IGameCanvasLite gameCanvas)
     {
         gc = gameCanvas ?? throw new ArgumentNullException(nameof(gameCanvas));
     }

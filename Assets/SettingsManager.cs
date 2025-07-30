@@ -9,7 +9,7 @@ using System;
 /// </summary>
 public class SettingsManager
 {
-    private readonly IGameCanvas gc;
+    private readonly IGameCanvasLite gc;
     
     // 設定値
     private string canvasApiToken = "";
@@ -19,7 +19,7 @@ public class SettingsManager
     public event Action<string>? OnCanvasTokenChanged;
     public event Action<int>? OnCommuteTimeChanged;
     
-    public SettingsManager(IGameCanvas gameCanvas)
+    public SettingsManager(IGameCanvasLite gameCanvas)
     {
         gc = gameCanvas ?? throw new ArgumentNullException(nameof(gameCanvas));
         LoadAllSettings();
@@ -105,7 +105,7 @@ public class SettingsManager
     /// </summary>
     public void ClearCommuteTime()
     {
-        commuteTimeMinutes = 0;
+        commuteTimeMinutes = 20; // デフォルト値
         gc.Save("commute_time", commuteTimeMinutes);
         OnCommuteTimeChanged?.Invoke(commuteTimeMinutes);
         
@@ -189,6 +189,44 @@ public class SettingsManager
             commuteTimeMinutes = 0;
             Debug.Log("[SettingsManager] 通学時間は未設定");
         }
+    }
+    
+    /// <summary>
+    /// Canvas APIトークンを取得
+    /// </summary>
+    public string GetCanvasApiToken()
+    {
+        return canvasApiToken;
+    }
+    
+    /// <summary>
+    /// 通学時間を取得
+    /// </summary>
+    public int GetCommuteTime()
+    {
+        return commuteTimeMinutes;
+    }
+    
+    /// <summary>
+    /// 設定が有効かどうか
+    /// </summary>
+    public bool HasValidSettings()
+    {
+        return HasCanvasApiToken && 
+               HasCommuteTime && 
+               canvasApiToken.Length >= 20 && 
+               commuteTimeMinutes > 0 && 
+               commuteTimeMinutes <= 300;
+    }
+    
+    /// <summary>
+    /// 全設定をクリア
+    /// </summary>
+    public void ClearAllSettings()
+    {
+        ClearCanvasApiToken();
+        ClearCommuteTime();
+        Debug.Log("[SettingsManager] 全設定をクリアしました");
     }
     
     /// <summary>
